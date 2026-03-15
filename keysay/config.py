@@ -100,6 +100,7 @@ class Config:
     mic_device: int = -1  # -1 = system default
     clipboard_fallback: bool = True  # Copy to clipboard instead of Cmd+V when not in text field
     dynamic_loading: bool = False  # Load models on demand, unload after each transcription
+    developer_mode: bool = False  # Show live system logs in settings
 
     def save(self):
         os.makedirs(CONFIG_DIR, exist_ok=True)
