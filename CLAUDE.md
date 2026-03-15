@@ -42,11 +42,25 @@ After any UI or code change, rebuild and test the app before pushing:
 rm -rf dist build && bash scripts/build_app.sh && open dist/keysay.app
 ```
 
-For releases, also create the DMG and upload it:
+## Releasing
 
 ```bash
+# 1. Build from clean state
+rm -rf dist build && bash scripts/build_app.sh
+
+# 2. Create DMG and zip
 bash scripts/create_dmg.sh
-gh release create vX.Y.Z dist/keysay-installer.dmg dist/keysay-macos-arm64.zip
+cd dist && zip -r keysay-macos-arm64.zip keysay.app && cd ..
+
+# 3. Create GitHub release (bump version)
+gh release create vX.Y.Z \
+  --title "vX.Y.Z" \
+  --notes "changelog here" \
+  dist/keysay-installer.dmg \
+  dist/keysay-macos-arm64.zip
+
+# 4. Optionally copy to /Applications
+cp -R dist/keysay.app /Applications/
 ```
 
 ## Key files
