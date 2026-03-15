@@ -1,0 +1,10 @@
+.env
+__pycache__/
+*.pyc
+.DS_Store
+build/
+dist/
+*.egg-info/
+vlm_training/images/
+vlm_training/vlm-context-lora/
+keysay-vlm-context-0.8B-8bit/
