@@ -1,9 +1,10 @@
 """Settings window — warm light theme, sidebar navigation, auto-save."""
 
+import logging
 import os
 
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QFont, QIcon, QPainter, QPen, QPixmap
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QColor, QFont, QIcon, QPainter, QPen, QPixmap, QTextCursor
 from PyQt6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -553,6 +554,25 @@ class _RamStatusBar(QWidget):
 # Settings window
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Qt-compatible log handler — appends log records to a QPlainTextEdit
+# ---------------------------------------------------------------------------
+
+class _QtLogHandler(logging.Handler):
+    """Logging handler that appends formatted records to a QPlainTextEdit."""
+
+    def __init__(self, text_widget: QPlainTextEdit):
+        super().__init__()
+        self._widget = text_widget
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            msg = self.format(record)
+            self._widget.appendPlainText(msg)
+        except RuntimeError:
+            pass  # widget deleted
+
+
 class SettingsWindow(QDialog):
     settings_changed = pyqtSignal(Config)
     quit_requested = pyqtSignal()
@@ -1019,6 +1039,65 @@ class SettingsWindow(QDialog):
 
         layout.addWidget(dl_card)
 
+        # Developer mode
+        dev_card = _card()
+        dev_l = QVBoxLayout(dev_card)
+        dev_l.setSpacing(10)
+        dev_l.setContentsMargins(16, 16, 16, 16)
+
+        dev_row = QHBoxLayout()
+        dev_desc = QLabel("Developer mode")
+        dev_desc.setFont(sans(12))
+        dev_desc.setStyleSheet(f"color: {LT_TEXT_SEC}; border: none; background: transparent;")
+        dev_row.addWidget(dev_desc)
+        dev_row.addWidget(_info(
+            "Shows live system logs below.\n"
+            "Useful for debugging errors,\n"
+            "checking model loading status,\n"
+            "and monitoring transcription flow."))
+        dev_row.addStretch()
+        self._developer_mode_toggle = _Toggle()
+        self._developer_mode_toggle.toggled.connect(self._on_developer_mode_toggled)
+        dev_row.addWidget(self._developer_mode_toggle)
+        dev_l.addLayout(dev_row)
+
+        # Log viewer (hidden by default)
+        self._log_viewer = QPlainTextEdit()
+        self._log_viewer.setReadOnly(True)
+        self._log_viewer.setFont(mono(10))
+        self._log_viewer.setMaximumBlockCount(500)
+        self._log_viewer.setStyleSheet(
+            f"background: #1e1e1e; color: #d4d4d4; border: 1px solid {LT_BORDER}; "
+            f"border-radius: 6px; padding: 8px; selection-background-color: #264f78;"
+        )
+        self._log_viewer.setMinimumHeight(250)
+        self._log_viewer.setVisible(False)
+        dev_l.addWidget(self._log_viewer)
+
+        # Clear button (hidden by default)
+        self._log_clear_btn = QPushButton("Clear logs")
+        self._log_clear_btn.setFont(sans(10))
+        self._log_clear_btn.setFixedHeight(28)
+        self._log_clear_btn.setStyleSheet(
+            f"QPushButton {{ background: {LT_INPUT_BG}; color: {LT_TEXT_SEC}; "
+            f"border: 1px solid {LT_BORDER}; border-radius: 4px; padding: 0 12px; }}"
+            f"QPushButton:hover {{ background: {LT_HOVER}; }}"
+        )
+        self._log_clear_btn.clicked.connect(self._log_viewer.clear)
+        self._log_clear_btn.setVisible(False)
+        dev_l.addWidget(self._log_clear_btn, alignment=Qt.AlignmentFlag.AlignRight)
+
+        layout.addWidget(dev_card)
+
+        # Log handler for capturing Python logging output
+        self._log_handler = _QtLogHandler(self._log_viewer)
+
+        # Timer to read the debug.log file for _dbg() messages
+        self._log_file_pos = 0
+        self._log_timer = QTimer()
+        self._log_timer.setInterval(500)
+        self._log_timer.timeout.connect(self._poll_log_file)
+
         # Context words
         layout.addSpacing(4)
         ctx_row = QHBoxLayout()
@@ -1302,6 +1381,55 @@ class SettingsWindow(QDialog):
 
     # ------------------------------------------------------------------
 
+    # ------------------------------------------------------------------
+    # Developer mode
+    # ------------------------------------------------------------------
+
+    def _on_developer_mode_toggled(self) -> None:
+        on = self._developer_mode_toggle.is_on()
+        self._log_viewer.setVisible(on)
+        self._log_clear_btn.setVisible(on)
+        if on:
+            # Attach handler to root logger
+            root = logging.getLogger()
+            if self._log_handler not in root.handlers:
+                self._log_handler.setLevel(logging.DEBUG)
+                self._log_handler.setFormatter(
+                    logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%H:%M:%S")
+                )
+                root.addHandler(self._log_handler)
+                root.setLevel(logging.DEBUG)
+            # Start polling the debug.log file
+            log_path = os.path.expanduser("~/Library/Application Support/keysay/debug.log")
+            if os.path.exists(log_path):
+                self._log_file_pos = os.path.getsize(log_path)
+            self._log_timer.start()
+        else:
+            root = logging.getLogger()
+            if self._log_handler in root.handlers:
+                root.removeHandler(self._log_handler)
+            self._log_timer.stop()
+        self._auto_save()
+
+    def _poll_log_file(self) -> None:
+        """Read new lines from debug.log and append to the log viewer."""
+        log_path = os.path.expanduser("~/Library/Application Support/keysay/debug.log")
+        try:
+            size = os.path.getsize(log_path)
+            if size <= self._log_file_pos:
+                if size < self._log_file_pos:
+                    self._log_file_pos = 0  # file was truncated
+                return
+            with open(log_path, "r") as f:
+                f.seek(self._log_file_pos)
+                new_text = f.read()
+                self._log_file_pos = f.tell()
+            if new_text.strip():
+                for line in new_text.strip().split("\n"):
+                    self._log_viewer.appendPlainText(f"[dbg] {line}")
+        except OSError:
+            pass
+
     def _populate(self, cfg: Config) -> None:
         self._status_banner.set_active(cfg.active)
         # Mic device
@@ -1331,6 +1459,9 @@ class SettingsWindow(QDialog):
         self._correction_preset_combo.setCurrentIndex(pidx)
         self._clipboard_fallback_toggle.set_on(cfg.clipboard_fallback)
         self._dynamic_loading_toggle.set_on(cfg.dynamic_loading)
+        self._developer_mode_toggle.set_on(cfg.developer_mode)
+        if cfg.developer_mode:
+            self._on_developer_mode_toggled()
         self._on_vlm_toggled()
         self._update_ram_bar()
         self._tag_input.set_tags(cfg.context_words)
@@ -1358,6 +1489,7 @@ class SettingsWindow(QDialog):
             correction_preset=self._correction_preset_combo.currentData(),
             clipboard_fallback=self._clipboard_fallback_toggle.is_on(),
             dynamic_loading=self._dynamic_loading_toggle.is_on(),
+            developer_mode=self._developer_mode_toggle.is_on(),
         )
 
     def _update_dynamic_loading_ui(self) -> None:
