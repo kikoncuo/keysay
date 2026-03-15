@@ -27,11 +27,18 @@ gh pr merge --merge
 - `vlm_training/` — Training data, adapters, and results (not in git)
 - `dist/` — Built app bundle (not in git)
 
-## Running
+## Running and building
 
 ```bash
 python -m keysay          # Run from source
-bash scripts/build_app.sh # Build .app bundle
+bash scripts/build_app.sh # Build .app bundle → dist/keysay.app
+open dist/keysay.app      # Launch the built app
+```
+
+After any UI or code change, rebuild and test the app before pushing:
+
+```bash
+rm -rf dist build && bash scripts/build_app.sh && open dist/keysay.app
 ```
 
 ## Key files

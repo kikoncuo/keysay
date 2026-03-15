@@ -983,62 +983,6 @@ class SettingsWindow(QDialog):
         _, layout = self._make_section_page()
         layout.addWidget(_section_title("Advanced"))
 
-        # Clipboard fallback
-        cb_card = _card()
-        cb_l = QVBoxLayout(cb_card)
-        cb_l.setSpacing(10)
-        cb_l.setContentsMargins(16, 16, 16, 16)
-
-        cb_row = QHBoxLayout()
-        cb_desc = QLabel("Copy to clipboard if no text field detected")
-        cb_desc.setFont(sans(12))
-        cb_desc.setStyleSheet(f"color: {LT_TEXT_SEC}; border: none; background: transparent;")
-        cb_desc.setWordWrap(True)
-        cb_row.addWidget(cb_desc, 1)
-        cb_row.addWidget(_info(
-            "When enabled, if keysay can't find a text\n"
-            "field to paste into, the transcription is\n"
-            "copied to your clipboard instead.\n\n"
-            "You'll see a \"Copied to clipboard\" notification\n"
-            "on the pill and can paste manually with Cmd+V."))
-        self._clipboard_fallback_toggle = _Toggle()
-        self._clipboard_fallback_toggle.toggled.connect(lambda _: self._auto_save())
-        cb_row.addWidget(self._clipboard_fallback_toggle)
-        cb_l.addLayout(cb_row)
-
-        layout.addWidget(cb_card)
-
-        # Dynamic loading
-        dl_card = _card()
-        dl_l = QVBoxLayout(dl_card)
-        dl_l.setSpacing(10)
-        dl_l.setContentsMargins(16, 16, 16, 16)
-
-        dl_row = QHBoxLayout()
-        dl_desc = QLabel("Dynamic loading")
-        dl_desc.setFont(sans(12))
-        dl_desc.setStyleSheet(f"color: {LT_TEXT_SEC}; border: none; background: transparent;")
-        dl_row.addWidget(dl_desc)
-        dl_row.addWidget(_info(
-            "When enabled, models are loaded into RAM\n"
-            "only when you press the hotkey, and unloaded\n"
-            "after each transcription.\n\n"
-            "Saves RAM when keysay is idle, but adds\n"
-            "a few seconds delay on the first press."))
-        dl_row.addStretch()
-        self._dynamic_loading_toggle = _Toggle()
-        self._dynamic_loading_toggle.toggled.connect(lambda _: (self._update_dynamic_loading_ui(), self._update_ram_bar(), self._auto_save()))
-        dl_row.addWidget(self._dynamic_loading_toggle)
-        dl_l.addLayout(dl_row)
-
-        dl_hint = QLabel("Load models when you press the hotkey, unload after each transcription to free RAM")
-        dl_hint.setFont(sans(10))
-        dl_hint.setStyleSheet(f"color: {LT_TEXT_MUTED}; border: none; background: transparent;")
-        dl_hint.setWordWrap(True)
-        dl_l.addWidget(dl_hint)
-
-        layout.addWidget(dl_card)
-
         # Developer mode
         dev_card = _card()
         dev_l = QVBoxLayout(dev_card)
@@ -1097,6 +1041,62 @@ class SettingsWindow(QDialog):
         self._log_timer = QTimer()
         self._log_timer.setInterval(500)
         self._log_timer.timeout.connect(self._poll_log_file)
+
+        # Clipboard fallback
+        cb_card = _card()
+        cb_l = QVBoxLayout(cb_card)
+        cb_l.setSpacing(10)
+        cb_l.setContentsMargins(16, 16, 16, 16)
+
+        cb_row = QHBoxLayout()
+        cb_desc = QLabel("Copy to clipboard if no text field detected")
+        cb_desc.setFont(sans(12))
+        cb_desc.setStyleSheet(f"color: {LT_TEXT_SEC}; border: none; background: transparent;")
+        cb_desc.setWordWrap(True)
+        cb_row.addWidget(cb_desc, 1)
+        cb_row.addWidget(_info(
+            "When enabled, if keysay can't find a text\n"
+            "field to paste into, the transcription is\n"
+            "copied to your clipboard instead.\n\n"
+            "You'll see a \"Copied to clipboard\" notification\n"
+            "on the pill and can paste manually with Cmd+V."))
+        self._clipboard_fallback_toggle = _Toggle()
+        self._clipboard_fallback_toggle.toggled.connect(lambda _: self._auto_save())
+        cb_row.addWidget(self._clipboard_fallback_toggle)
+        cb_l.addLayout(cb_row)
+
+        layout.addWidget(cb_card)
+
+        # Dynamic loading
+        dl_card = _card()
+        dl_l = QVBoxLayout(dl_card)
+        dl_l.setSpacing(10)
+        dl_l.setContentsMargins(16, 16, 16, 16)
+
+        dl_row = QHBoxLayout()
+        dl_desc = QLabel("Dynamic loading")
+        dl_desc.setFont(sans(12))
+        dl_desc.setStyleSheet(f"color: {LT_TEXT_SEC}; border: none; background: transparent;")
+        dl_row.addWidget(dl_desc)
+        dl_row.addWidget(_info(
+            "When enabled, models are loaded into RAM\n"
+            "only when you press the hotkey, and unloaded\n"
+            "after each transcription.\n\n"
+            "Saves RAM when keysay is idle, but adds\n"
+            "a few seconds delay on the first press."))
+        dl_row.addStretch()
+        self._dynamic_loading_toggle = _Toggle()
+        self._dynamic_loading_toggle.toggled.connect(lambda _: (self._update_dynamic_loading_ui(), self._update_ram_bar(), self._auto_save()))
+        dl_row.addWidget(self._dynamic_loading_toggle)
+        dl_l.addLayout(dl_row)
+
+        dl_hint = QLabel("Load models when you press the hotkey, unload after each transcription to free RAM")
+        dl_hint.setFont(sans(10))
+        dl_hint.setStyleSheet(f"color: {LT_TEXT_MUTED}; border: none; background: transparent;")
+        dl_hint.setWordWrap(True)
+        dl_l.addWidget(dl_hint)
+
+        layout.addWidget(dl_card)
 
         # Context words
         layout.addSpacing(4)
