@@ -19,52 +19,36 @@ class ASREngine:
     def __init__(self):
         self._session = None
         self._model_id: str | None = None
-        self._quantization: str | None = None
 
     @property
     def is_loaded(self) -> bool:
         return self._session is not None
 
-    def load_model(
-        self,
-        model_id: str = "Qwen/Qwen3-ASR-1.7B",
-        quantization: str | None = None,
-    ):
+    def load_model(self, model_id: str = "Qwen/Qwen3-ASR-1.7B"):
         """Load (or reload) the ASR model.
 
         Args:
-            model_id: HuggingFace model identifier.
-            quantization: "q4", "q8", or None for bf16.
+            model_id: HuggingFace model identifier. Use pre-quantized repos
+                      (e.g. mlx-community/Qwen3-ASR-1.7B-4bit) for smaller models.
 
         The first call may take a while if the model needs to be downloaded.
         """
-        if (
-            self._session is not None
-            and self._model_id == model_id
-            and self._quantization == quantization
-        ):
-            logger.debug("Model already loaded: %s (quant=%s)", model_id, quantization)
+        if self._session is not None and self._model_id == model_id:
+            logger.debug("Model already loaded: %s", model_id)
             return
 
-        # Unload any previous session first.
         self.unload_model()
 
         logger.info(
-            "Loading ASR model %s (quantization=%s) — this may take a moment "
+            "Loading ASR model %s — this may take a moment "
             "on first run while the model downloads...",
             model_id,
-            quantization or "bf16",
         )
 
         from mlx_qwen3_asr import Session
 
-        kwargs: dict = {"model": model_id}
-        if quantization:
-            kwargs["quantize"] = quantization
-
-        self._session = Session(**kwargs)
+        self._session = Session(model=model_id)
         self._model_id = model_id
-        self._quantization = quantization
         logger.info("ASR model loaded successfully.")
 
     def transcribe(
@@ -129,4 +113,3 @@ class ASREngine:
             logger.info("Unloading ASR model.")
             self._session = None
             self._model_id = None
-            self._quantization = None

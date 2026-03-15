@@ -46,12 +46,6 @@ def _parse_args() -> argparse.Namespace:
         help="Virtual keycode for the hotkey (default: 61 = Right Option).",
     )
     parser.add_argument(
-        "--quantization",
-        choices=["q4", "q8"],
-        default=None,
-        help="Model quantization: q4, q8, or omit for bf16.",
-    )
-    parser.add_argument(
         "--verbose", "-v",
         action="store_true",
         help="Enable debug logging.",
@@ -129,8 +123,6 @@ def main():
         cfg.context_words = args.context
     if args.hotkey_keycode is not None:
         cfg.hotkey_keycode = args.hotkey_keycode
-    if args.quantization is not None:
-        cfg.quantization = args.quantization
 
     # -- Check accessibility ------------------------------------------------
     from keysay.hotkey.cgevent_listener import _check_accessibility
@@ -146,9 +138,9 @@ def main():
     from keysay.asr.engine import ASREngine
 
     engine = ASREngine()
-    print(f"Loading model {cfg.model_id} (quantization={cfg.quantization_for_asr or 'bf16'})...")
+    print(f"Loading model {cfg.model_id}...")
     try:
-        engine.load_model(cfg.model_id, cfg.quantization_for_asr)
+        engine.load_model(cfg.model_id)
     except Exception as exc:
         logger.error("Failed to load ASR model: %s", exc)
         sys.exit(1)
