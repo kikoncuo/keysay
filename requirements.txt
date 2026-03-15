@@ -1,6 +1,8 @@
 mlx-qwen3-asr
+mlx-vlm>=0.4.0
 PyQt6>=6.7.0
 sounddevice>=0.5.0
 soundfile>=0.13.0
 pyobjc-framework-Quartz>=10.0
 pyobjc-framework-Cocoa>=10.0
+huggingface_hub>=0.20.0
