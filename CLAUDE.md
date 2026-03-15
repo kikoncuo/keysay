@@ -30,15 +30,23 @@ gh pr merge --merge
 ## Running and building
 
 ```bash
-python -m keysay          # Run from source
-bash scripts/build_app.sh # Build .app bundle → dist/keysay.app
-open dist/keysay.app      # Launch the built app
+python -m keysay            # Run from source
+bash scripts/build_app.sh   # Build .app bundle → dist/keysay.app
+bash scripts/create_dmg.sh  # Create DMG installer → dist/keysay-installer.dmg
+open dist/keysay.app        # Launch the built app
 ```
 
 After any UI or code change, rebuild and test the app before pushing:
 
 ```bash
 rm -rf dist build && bash scripts/build_app.sh && open dist/keysay.app
+```
+
+For releases, also create the DMG and upload it:
+
+```bash
+bash scripts/create_dmg.sh
+gh release create vX.Y.Z dist/keysay-installer.dmg dist/keysay-macos-arm64.zip
 ```
 
 ## Key files
