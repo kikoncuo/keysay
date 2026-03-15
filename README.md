@@ -119,9 +119,7 @@ Settings persist in `~/Library/Application Support/keysay/config.json`. History 
 
 ## Fine-tuning
 
-The transcription correction model and VLM context extractor were fine-tuned using knowledge distillation from Gemini Flash. Full details, scripts, and training data: **[qwen3.5-fine-tuning-guide](https://github.com/kikoncuo/qwen3.5-fine-tuning-guide)**
-
-During that process we found and fixed [3 bugs in mlx-vlm's LoRA training pipeline](https://github.com/Blaizzy/mlx-vlm/issues/824) that prevented VLM fine-tuning on Qwen3.5.
+The transcription correction model was fine-tuned using knowledge distillation from Gemini Flash — LoRA training with `mlx_lm` on Apple Silicon, 5 minutes to train. The VLM context extractor was fine-tuned using `transformers` + PEFT on the MPS backend since Qwen3.5's hybrid DeltaRNN architecture requires careful LoRA target selection that PEFT provides control over. Full details, scripts, and training data: **[qwen3.5-fine-tuning-guide](https://github.com/kikoncuo/qwen3.5-fine-tuning-guide)**
 
 ## License
 
