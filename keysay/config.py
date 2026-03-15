@@ -24,14 +24,8 @@ SUPPORTED_LANGUAGES = [
 ]
 
 SUPPORTED_MODELS = [
-    ("Qwen/Qwen3-ASR-1.7B", "1.7B (Best accuracy)"),
-    ("Qwen/Qwen3-ASR-0.6B", "0.6B (Faster)"),
-]
-
-SUPPORTED_QUANTIZATIONS = [
-    ("", "Full precision (bf16)"),
-    ("q8", "8-bit (fast, near-lossless)"),
-    ("q4", "4-bit (fastest)"),
+    ("Qwen/Qwen3-ASR-1.7B", "1.7B (Best accuracy, ~5 GB)", 5.0),
+    ("Qwen/Qwen3-ASR-0.6B", "0.6B (Lighter, ~2 GB)", 2.0),
 ]
 
 # VLM models for screen context extraction (Qwen3.5 VLM via mlx-vlm)
@@ -42,11 +36,8 @@ VLM_MODELS = [
     ("mlx-community/Qwen3.5-9B-MLX-4bit", "9B 4-bit (~7 GB)", 7.0),
 ]
 
-# Estimated RAM for ASR models
-ASR_RAM_ESTIMATES = {
-    "Qwen/Qwen3-ASR-0.6B": 2.0,
-    "Qwen/Qwen3-ASR-1.7B": 5.0,
-}
+# Estimated RAM for ASR models (derived from SUPPORTED_MODELS)
+ASR_RAM_ESTIMATES = {model_id: ram for model_id, _, ram in SUPPORTED_MODELS}
 
 # Estimated RAM for correction model
 CORRECTION_RAM_ESTIMATE = 1.5  # 0.8B 8-bit ≈ 1.5 GB
@@ -86,7 +77,6 @@ class Config:
     context_words: list[str] = field(default_factory=list)
     replacements: list[list[str]] = field(default_factory=list)  # [[find, replace], ...]
     model_id: str = "Qwen/Qwen3-ASR-1.7B"
-    quantization: str = ""
     hotkey_keycode: int = DEFAULT_HOTKEY_KEYCODE
     hotkey_name: str = DEFAULT_HOTKEY_NAME
     hotkey_is_modifier: bool = True
@@ -134,10 +124,6 @@ class Config:
         if not self.context_words:
             return None
         return " ".join(self.context_words)
-
-    @property
-    def quantization_for_asr(self) -> str | None:
-        return self.quantization if self.quantization else None
 
     def apply_replacements(self, text: str) -> str:
         """Apply find→replace pairs to transcribed text."""

@@ -29,7 +29,6 @@ from keysay.config import (
     HOTKEY_PRESETS,
     SUPPORTED_LANGUAGES,
     SUPPORTED_MODELS,
-    SUPPORTED_QUANTIZATIONS,
     VLM_MODELS,
     get_system_ram_gb,
 )
@@ -829,26 +828,12 @@ class SettingsWindow(QDialog):
             "1.7B: Best accuracy, uses ~5 GB RAM.\n"
             "0.6B: Faster, uses ~2 GB RAM."))
         self._model_combo = _styled_combo()
-        for model_id, display in SUPPORTED_MODELS:
+        for model_id, display, _ram in SUPPORTED_MODELS:
             self._model_combo.addItem(display, model_id)
         self._model_combo.setFont(mono(12))
         self._model_combo.currentIndexChanged.connect(self._update_ram_bar)
         self._model_combo.currentIndexChanged.connect(self._auto_save)
         cl.addWidget(self._model_combo)
-
-        cl.addSpacing(4)
-        cl.addWidget(_label_with_info("Quantization",
-            "Reduces model size and RAM usage at the\n"
-            "cost of slight accuracy loss.\n\n"
-            "bf16: Full precision, best quality.\n"
-            "q8: 8-bit, nearly identical quality, ~50% less RAM.\n"
-            "q4: 4-bit, fastest, slight quality drop."))
-        self._quant_combo = _styled_combo()
-        for quant_id, display in SUPPORTED_QUANTIZATIONS:
-            self._quant_combo.addItem(display, quant_id)
-        self._quant_combo.setFont(mono(12))
-        self._quant_combo.currentIndexChanged.connect(self._auto_save)
-        cl.addWidget(self._quant_combo)
 
         cl.addSpacing(4)
         self._asr_ram_label = QLabel("")
@@ -1447,9 +1432,6 @@ class SettingsWindow(QDialog):
         model_ids = [m[0] for m in SUPPORTED_MODELS]
         midx = model_ids.index(cfg.model_id) if cfg.model_id in model_ids else 0
         self._model_combo.setCurrentIndex(midx)
-        quant_ids = [q[0] for q in SUPPORTED_QUANTIZATIONS]
-        qidx = quant_ids.index(cfg.quantization) if cfg.quantization in quant_ids else 0
-        self._quant_combo.setCurrentIndex(qidx)
         self._vlm_toggle.set_on(cfg.vlm_enabled)
         vlm_model_ids = [m[0] for m in VLM_MODELS]
         vidx = vlm_model_ids.index(cfg.vlm_model) if cfg.vlm_model in vlm_model_ids else 0
@@ -1478,7 +1460,6 @@ class SettingsWindow(QDialog):
             context_words=self._tag_input.get_tags(),
             replacements=self._replacements.get_pairs(),
             model_id=self._model_combo.currentData(),
-            quantization=self._quant_combo.currentData(),
             hotkey_keycode=hk_keycode,
             hotkey_name=hk_name,
             hotkey_is_modifier=hk_is_mod,

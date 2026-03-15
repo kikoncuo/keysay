@@ -64,6 +64,7 @@ class KeysayApp(QObject):
         self._transcribing = False
         self._model_ready = False
         self._was_pressed = False
+        self._loading_cancelled = False  # Cancel flag for async model loads
         self._last_duration: float = 0.0
         self._last_raw_text: str = ""
         self._target_app = None  # NSRunningApplication captured at hotkey press
@@ -128,6 +129,12 @@ class KeysayApp(QObject):
         if not check_and_prompt():
             return 0
 
+        # Always start active — avoids getting stuck with no UI after a crash
+        if not self._config.active:
+            self._config.active = True
+            self._config.save()
+            self._tray.set_active(True)
+
         self._dbg(f"active={self._config.active}, dynamic={self._config.dynamic_loading}")
         if self._config.active:
             self._pill.restore_position(self._config.pill_x, self._config.pill_y)
@@ -185,11 +192,11 @@ class KeysayApp(QObject):
 
     def _load_model_async(self):
         self._model_ready = False
+        self._loading_cancelled = False
         if self._pill.isVisible() and not self._recording:
             self._pill.set_state("loading")
 
         model_id = self._config.model_id
-        quantization = self._config.quantization_for_asr
 
         def _load():
             try:
@@ -197,10 +204,16 @@ class KeysayApp(QObject):
                 from keysay.models import is_model_cached
                 if not is_model_cached(model_id):
                     self._sig_download_started.emit(model_id)
-                self._engine.load_model(model_id, quantization)
+                if self._loading_cancelled:
+                    return
+                self._engine.load_model(model_id)
+                if self._loading_cancelled:
+                    return
                 self._dbg("ASR model loaded OK")
                 self._sig_model_loaded.emit()
             except Exception as exc:
+                if self._loading_cancelled:
+                    return
                 self._dbg(f"ASR load FAILED: {exc}")
                 logger.error("Failed to load ASR model: %s", exc, exc_info=True)
                 self._sig_model_error.emit(str(exc))
@@ -232,27 +245,40 @@ class KeysayApp(QObject):
         self._corrector_ready = False
 
         def _load_both():
+            if self._loading_cancelled:
+                return
             from keysay.models import is_model_cached
 
             if self._config.vlm_enabled:
                 try:
                     if not is_model_cached(self._config.vlm_model):
                         self._sig_download_started.emit(self._config.vlm_model)
+                    if self._loading_cancelled:
+                        return
                     self._extractor.load_model(self._config.vlm_model)
-                    self._sig_vlm_loaded.emit()
+                    if not self._loading_cancelled:
+                        self._sig_vlm_loaded.emit()
                 except Exception as exc:
-                    logger.error("Failed to load VLM: %s", exc)
-                    self._sig_vlm_error.emit(str(exc))
+                    if not self._loading_cancelled:
+                        logger.error("Failed to load VLM: %s", exc)
+                        self._sig_vlm_error.emit(str(exc))
+
+            if self._loading_cancelled:
+                return
 
             if self._config.correction_preset != "none":
                 try:
                     if not is_model_cached(self._config.correction_model):
                         self._sig_download_started.emit(self._config.correction_model)
+                    if self._loading_cancelled:
+                        return
                     self._corrector.load_model(self._config.correction_model)
-                    self._sig_corrector_loaded.emit()
+                    if not self._loading_cancelled:
+                        self._sig_corrector_loaded.emit()
                 except Exception as exc:
-                    logger.error("Failed to load corrector: %s", exc)
-                    self._sig_corrector_error.emit(str(exc))
+                    if not self._loading_cancelled:
+                        logger.error("Failed to load corrector: %s", exc)
+                        self._sig_corrector_error.emit(str(exc))
 
         threading.Thread(target=_load_both, daemon=True).start()
 
@@ -626,8 +652,7 @@ class KeysayApp(QObject):
         # Skip model loading/unloading when dynamic loading is on
         # (models load on hotkey press, unload after transcription)
         if not new_config.dynamic_loading:
-            if (new_config.model_id != old.model_id
-                    or new_config.quantization != old.quantization):
+            if new_config.model_id != old.model_id:
                 self._load_model_async()
 
             # VLM model handling
@@ -670,13 +695,17 @@ class KeysayApp(QObject):
                 if self._config.vlm_enabled or self._config.correction_preset != "none":
                     self._load_vlm_and_corrector_async()
         else:
+            self._loading_cancelled = True  # Stop any in-flight model loads
             self._config.pill_x, self._config.pill_y = self._pill.save_position()
             self._config.save()
             self._poll_timer.stop()
             self._listener.stop()
             self._pill.hide()
             self._recording = False
-            self._unload_all_models()
+            try:
+                self._unload_all_models()
+            except Exception as exc:
+                logger.warning("Error during model unload: %s", exc)
 
     def _quit(self):
         self._poll_timer.stop()
