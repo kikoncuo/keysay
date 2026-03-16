@@ -42,13 +42,13 @@ from keysay.ui.theme import (
 # ---------------------------------------------------------------------------
 # Sizes — horizontal capsules
 # ---------------------------------------------------------------------------
-_IDLE_SIZE = QSize(120, 32)
-_LOADING_SIZE = QSize(140, 32)
-_ACTIVE_SIZE = QSize(180, 36)
-_PROCESSING_SIZE = QSize(140, 32)
-_NOTIFY_SIZE = QSize(200, 32)
+_IDLE_SIZE = QSize(60, 16)
+_LOADING_SIZE = QSize(70, 16)
+_ACTIVE_SIZE = QSize(90, 18)
+_PROCESSING_SIZE = QSize(70, 16)
+_NOTIFY_SIZE = QSize(100, 16)
 
-_BOTTOM_MARGIN = 80
+_BOTTOM_MARGIN = 40
 
 # Waveform config
 _NUM_BARS = 10

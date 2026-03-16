@@ -7,6 +7,7 @@ Usage:
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -89,6 +90,8 @@ def run_benchmark(model_id: str, adapter_path: str | None = None):
 
     for i, entry in enumerate(data):
         img_path = str(DATA_DIR / entry["image"])
+        if not os.path.exists(img_path):
+            continue
 
         prompt = apply_chat_template(
             processor,

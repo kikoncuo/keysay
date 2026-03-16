@@ -64,6 +64,8 @@ class HotkeyListener:
         self._keycode = keycode
         self._is_modifier = is_modifier
         self.pressed = False  # Polled by the main thread
+        self.fn_v_pressed = False  # Fn+V combo detected
+        self._fn_held = False  # Track Fn key state
         self._thread: threading.Thread | None = None
         self._run_loop = None
         self._run_loop_ready = threading.Event()
@@ -113,8 +115,20 @@ class HotkeyListener:
         CFRunLoopRun()
 
     def _tap_callback(self, proxy, event_type, event, refcon):
-        """MUST be non-blocking. Only sets self.pressed."""
+        """MUST be non-blocking. Only sets flags."""
         try:
+            # Track Fn key state for Fn+V detection
+            if event_type == kCGEventFlagsChanged:
+                flags = CGEventGetFlags(event)
+                self._fn_held = bool(flags & 0x00800000)  # Fn/Globe bit
+
+            # Detect Fn+V combo (V = keycode 9)
+            if event_type == kCGEventKeyDown and self._fn_held:
+                keycode = CGEventGetIntegerValueField(event, 6)
+                if keycode == 9 and not CGEventGetIntegerValueField(event, kCGKeyboardEventAutorepeat):
+                    self.fn_v_pressed = True
+
+            # Normal hotkey detection
             if self._is_modifier:
                 if event_type == kCGEventFlagsChanged:
                     flags = CGEventGetFlags(event)

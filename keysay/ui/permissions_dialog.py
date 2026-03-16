@@ -198,9 +198,9 @@ class PermissionsDialog(QDialog):
         quit_btn.clicked.connect(self._quit_app)
         btn_row.addWidget(quit_btn)
 
-        self._cont_btn = QPushButton("Continue anyway")
+        self._cont_btn = QPushButton("Quit & Reopen")
         self._cont_btn.setFont(sans(13))
-        self._cont_btn.clicked.connect(self.accept)
+        self._cont_btn.clicked.connect(self._quit_app)
         btn_row.addWidget(self._cont_btn)
 
         outer.addLayout(btn_row)
@@ -266,36 +266,26 @@ class PermissionsDialog(QDialog):
         return card, card_info
 
     def _mark_granted(self, info: dict) -> None:
-        """Update a permission card to show granted state."""
+        """Update a permission card to show granted state.
+
+        Button stays clickable — permission checks can give false positives,
+        so users should always be able to open System Settings.
+        """
         info["granted"] = True
         info["dot"].setStyleSheet(f"background: {STATE_ACTIVE}; border-radius: 4px;")
-        info["desc_label"].setText("Granted")
+        info["desc_label"].setText("Looks granted \u2014 open settings to verify")
         info["desc_label"].setStyleSheet(f"color: {STATE_ACTIVE}; background: transparent; border: none;")
-        info["btn"].setText("\u2713")
-        info["btn"].setEnabled(False)
-        info["btn"].setStyleSheet(f"""
-            QPushButton {{
-                background: {STATE_ACTIVE}; color: #ffffff;
-                border: none; border-radius: 8px; padding: 6px;
-                font-size: 16px;
-            }}
-        """)
+        # Keep button enabled so users can always open System Settings
+        info["btn"].setText("Open")
 
     def _mark_needs_restart(self, info: dict) -> None:
         """Update a permission card to show restart-required state."""
         info["granted"] = True  # Count as resolved for auto-dismiss
         info["dot"].setStyleSheet(f"background: #f5a623; border-radius: 4px;")
-        info["desc_label"].setText("Granted \u2014 restart to activate")
+        info["desc_label"].setText("May need restart \u2014 open settings to check")
         info["desc_label"].setStyleSheet(f"color: #f5a623; background: transparent; border: none;")
-        info["btn"].setText("\u2713")
-        info["btn"].setEnabled(False)
-        info["btn"].setStyleSheet(f"""
-            QPushButton {{
-                background: #f5a623; color: #ffffff;
-                border: none; border-radius: 8px; padding: 6px;
-                font-size: 16px;
-            }}
-        """)
+        # Keep button enabled
+        info["btn"].setText("Open")
 
     def _poll_permissions(self) -> None:
         all_granted = True
@@ -324,25 +314,12 @@ class PermissionsDialog(QDialog):
 
         if all_granted:
             self._poll_timer.stop()
-            # Check if any permission needs a restart (screen recording)
-            needs_restart = any(
-                "screen_recording" == key and info["granted"]
-                for key, info in self._cards.items()
+            self._title.setText("Ready")
+            self._desc.setText(
+                "Permissions look good. If anything isn't working, "
+                "open System Settings and verify each permission is enabled."
             )
-            if needs_restart:
-                self._title.setText("Almost there!")
-                self._desc.setText(
-                    "All permissions granted. Restart keysay to activate "
-                    "screen recording."
-                )
-                self._cont_btn.setText("Quit & Restart")
-                self._cont_btn.clicked.disconnect()
-                self._cont_btn.clicked.connect(self._quit_app)
-            else:
-                self._title.setText("All set!")
-                self._desc.setText("Permissions granted. Starting keysay...")
-                self._cont_btn.setText("Continue")
-                QTimer.singleShot(1200, self.accept)
+            self._cont_btn.setText("Quit & Reopen")
 
     @staticmethod
     def _check_screen_recording_via_screenshot() -> bool:

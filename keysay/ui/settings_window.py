@@ -968,65 +968,6 @@ class SettingsWindow(QDialog):
         _, layout = self._make_section_page()
         layout.addWidget(_section_title("Advanced"))
 
-        # Developer mode
-        dev_card = _card()
-        dev_l = QVBoxLayout(dev_card)
-        dev_l.setSpacing(10)
-        dev_l.setContentsMargins(16, 16, 16, 16)
-
-        dev_row = QHBoxLayout()
-        dev_desc = QLabel("Developer mode")
-        dev_desc.setFont(sans(12))
-        dev_desc.setStyleSheet(f"color: {LT_TEXT_SEC}; border: none; background: transparent;")
-        dev_row.addWidget(dev_desc)
-        dev_row.addWidget(_info(
-            "Shows live system logs below.\n"
-            "Useful for debugging errors,\n"
-            "checking model loading status,\n"
-            "and monitoring transcription flow."))
-        dev_row.addStretch()
-        self._developer_mode_toggle = _Toggle()
-        self._developer_mode_toggle.toggled.connect(self._on_developer_mode_toggled)
-        dev_row.addWidget(self._developer_mode_toggle)
-        dev_l.addLayout(dev_row)
-
-        # Log viewer (hidden by default)
-        self._log_viewer = QPlainTextEdit()
-        self._log_viewer.setReadOnly(True)
-        self._log_viewer.setFont(mono(10))
-        self._log_viewer.setMaximumBlockCount(500)
-        self._log_viewer.setStyleSheet(
-            f"background: #1e1e1e; color: #d4d4d4; border: 1px solid {LT_BORDER}; "
-            f"border-radius: 6px; padding: 8px; selection-background-color: #264f78;"
-        )
-        self._log_viewer.setMinimumHeight(250)
-        self._log_viewer.setVisible(False)
-        dev_l.addWidget(self._log_viewer)
-
-        # Clear button (hidden by default)
-        self._log_clear_btn = QPushButton("Clear logs")
-        self._log_clear_btn.setFont(sans(10))
-        self._log_clear_btn.setFixedHeight(28)
-        self._log_clear_btn.setStyleSheet(
-            f"QPushButton {{ background: {LT_INPUT_BG}; color: {LT_TEXT_SEC}; "
-            f"border: 1px solid {LT_BORDER}; border-radius: 4px; padding: 0 12px; }}"
-            f"QPushButton:hover {{ background: {LT_HOVER}; }}"
-        )
-        self._log_clear_btn.clicked.connect(self._log_viewer.clear)
-        self._log_clear_btn.setVisible(False)
-        dev_l.addWidget(self._log_clear_btn, alignment=Qt.AlignmentFlag.AlignRight)
-
-        layout.addWidget(dev_card)
-
-        # Log handler for capturing Python logging output
-        self._log_handler = _QtLogHandler(self._log_viewer)
-
-        # Timer to read the debug.log file for _dbg() messages
-        self._log_file_pos = 0
-        self._log_timer = QTimer()
-        self._log_timer.setInterval(500)
-        self._log_timer.timeout.connect(self._poll_log_file)
-
         # Clipboard fallback
         cb_card = _card()
         cb_l = QVBoxLayout(cb_card)
@@ -1049,6 +990,22 @@ class SettingsWindow(QDialog):
         self._clipboard_fallback_toggle.toggled.connect(lambda _: self._auto_save())
         cb_row.addWidget(self._clipboard_fallback_toggle)
         cb_l.addLayout(cb_row)
+
+        # Preserve clipboard sub-option
+        pc_row = QHBoxLayout()
+        pc_desc = QLabel("Preserve clipboard when pasting")
+        pc_desc.setFont(sans(11))
+        pc_desc.setStyleSheet(f"color: {LT_TEXT_MUTED}; border: none; background: transparent;")
+        pc_desc.setWordWrap(True)
+        pc_row.addWidget(pc_desc, 1)
+        pc_row.addWidget(_info(
+            "Saves your clipboard before pasting the\n"
+            "transcription, then restores it afterward.\n\n"
+            "Your Cmd+V clipboard stays untouched."))
+        self._preserve_clipboard_toggle = _Toggle()
+        self._preserve_clipboard_toggle.toggled.connect(lambda _: self._auto_save())
+        pc_row.addWidget(self._preserve_clipboard_toggle)
+        cb_l.addLayout(pc_row)
 
         layout.addWidget(cb_card)
 
@@ -1135,6 +1092,60 @@ class SettingsWindow(QDialog):
         self._replacements.changed.connect(self._auto_save)
         rep_l.addWidget(self._replacements)
         layout.addWidget(rep_card)
+
+        # Developer mode
+        dev_card = _card()
+        dev_l = QVBoxLayout(dev_card)
+        dev_l.setSpacing(10)
+        dev_l.setContentsMargins(16, 16, 16, 16)
+
+        dev_row = QHBoxLayout()
+        dev_desc = QLabel("Developer mode")
+        dev_desc.setFont(sans(12))
+        dev_desc.setStyleSheet(f"color: {LT_TEXT_SEC}; border: none; background: transparent;")
+        dev_row.addWidget(dev_desc)
+        dev_row.addWidget(_info(
+            "Shows live system logs below.\n"
+            "Useful for debugging errors,\n"
+            "checking model loading status,\n"
+            "and monitoring transcription flow."))
+        dev_row.addStretch()
+        self._developer_mode_toggle = _Toggle()
+        self._developer_mode_toggle.toggled.connect(self._on_developer_mode_toggled)
+        dev_row.addWidget(self._developer_mode_toggle)
+        dev_l.addLayout(dev_row)
+
+        self._log_viewer = QPlainTextEdit()
+        self._log_viewer.setReadOnly(True)
+        self._log_viewer.setFont(mono(10))
+        self._log_viewer.setMaximumBlockCount(500)
+        self._log_viewer.setStyleSheet(
+            f"background: #1e1e1e; color: #d4d4d4; border: 1px solid {LT_BORDER}; "
+            f"border-radius: 6px; padding: 8px; selection-background-color: #264f78;"
+        )
+        self._log_viewer.setMinimumHeight(250)
+        self._log_viewer.setVisible(False)
+        dev_l.addWidget(self._log_viewer)
+
+        self._log_clear_btn = QPushButton("Clear logs")
+        self._log_clear_btn.setFont(sans(10))
+        self._log_clear_btn.setFixedHeight(28)
+        self._log_clear_btn.setStyleSheet(
+            f"QPushButton {{ background: {LT_INPUT_BG}; color: {LT_TEXT_SEC}; "
+            f"border: 1px solid {LT_BORDER}; border-radius: 4px; padding: 0 12px; }}"
+            f"QPushButton:hover {{ background: {LT_HOVER}; }}"
+        )
+        self._log_clear_btn.clicked.connect(self._log_viewer.clear)
+        self._log_clear_btn.setVisible(False)
+        dev_l.addWidget(self._log_clear_btn, alignment=Qt.AlignmentFlag.AlignRight)
+
+        layout.addWidget(dev_card)
+
+        self._log_handler = _QtLogHandler(self._log_viewer)
+        self._log_file_pos = 0
+        self._log_timer = QTimer()
+        self._log_timer.setInterval(500)
+        self._log_timer.timeout.connect(self._poll_log_file)
 
         layout.addStretch()
 
@@ -1440,6 +1451,7 @@ class SettingsWindow(QDialog):
         pidx = preset_keys.index(cfg.correction_preset) if cfg.correction_preset in preset_keys else 0
         self._correction_preset_combo.setCurrentIndex(pidx)
         self._clipboard_fallback_toggle.set_on(cfg.clipboard_fallback)
+        self._preserve_clipboard_toggle.set_on(cfg.preserve_clipboard)
         self._dynamic_loading_toggle.set_on(cfg.dynamic_loading)
         self._developer_mode_toggle.set_on(cfg.developer_mode)
         if cfg.developer_mode:
@@ -1469,6 +1481,7 @@ class SettingsWindow(QDialog):
             vlm_model=self._vlm_model_combo.currentData(),
             correction_preset=self._correction_preset_combo.currentData(),
             clipboard_fallback=self._clipboard_fallback_toggle.is_on(),
+            preserve_clipboard=self._preserve_clipboard_toggle.is_on(),
             dynamic_loading=self._dynamic_loading_toggle.is_on(),
             developer_mode=self._developer_mode_toggle.is_on(),
         )

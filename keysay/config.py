@@ -30,7 +30,8 @@ SUPPORTED_MODELS = [
 
 # VLM models for screen context extraction (Qwen3.5 VLM via mlx-vlm)
 VLM_MODELS = [
-    ("mlx-community/Qwen3.5-0.8B-8bit", "0.8B 8-bit (~3 GB)", 3.0),
+    ("Enriqueag26/keysay-vlm-context-0.8B-8bit", "0.8B fine-tuned (~3 GB)", 3.0),
+    ("mlx-community/Qwen3.5-0.8B-8bit", "0.8B base (~3 GB)", 3.0),
     ("mlx-community/Qwen3.5-2B-4bit", "2B 4-bit (~3 GB)", 3.0),
     ("mlx-community/Qwen3.5-4B-4bit", "4B 4-bit (~5 GB)", 5.0),
     ("mlx-community/Qwen3.5-9B-MLX-4bit", "9B 4-bit (~7 GB)", 7.0),
@@ -83,12 +84,13 @@ class Config:
     pill_x: int = -1
     pill_y: int = -1
     vlm_enabled: bool = False
-    vlm_model: str = "mlx-community/Qwen3.5-0.8B-8bit"
+    vlm_model: str = "Enriqueag26/keysay-vlm-context-0.8B-8bit"
     correction_model: str = "Enriqueag26/keysay-transcription-cleaner-0.8B-8bit"
     correction_preset: str = "none"
     custom_prompts: dict[str, str] = field(default_factory=dict)  # preset_key → custom system prompt
     mic_device: int = -1  # -1 = system default
     clipboard_fallback: bool = True  # Copy to clipboard instead of Cmd+V when not in text field
+    preserve_clipboard: bool = True  # Save and restore clipboard around paste
     dynamic_loading: bool = False  # Load models on demand, unload after each transcription
     developer_mode: bool = False  # Show live system logs in settings
 
