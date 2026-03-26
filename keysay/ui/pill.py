@@ -487,7 +487,7 @@ class FloatingPill(QWidget):
             ns_window.setLevel_(NSStatusWindowLevel)
             ns_window.setCollectionBehavior_(
                 1 << 0   # canJoinAllSpaces
-                | 1 << 4  # stationary
+                | 1 << 3  # transient (floating panel behavior)
                 | 1 << 9  # fullScreenAuxiliary
             )
             ns_window.setIgnoresMouseEvents_(False)
@@ -504,7 +504,7 @@ class FloatingPill(QWidget):
                             and abs(frame.size.height - geo.height()) < 5):
                         window.setLevel_(NSStatusWindowLevel)
                         window.setCollectionBehavior_(
-                            1 << 0 | 1 << 4 | 1 << 9
+                            1 << 0 | 1 << 3 | 1 << 9
                         )
                         window.setIgnoresMouseEvents_(False)
                         window.setHidesOnDeactivate_(False)

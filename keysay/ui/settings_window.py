@@ -991,22 +991,6 @@ class SettingsWindow(QDialog):
         cb_row.addWidget(self._clipboard_fallback_toggle)
         cb_l.addLayout(cb_row)
 
-        # Preserve clipboard sub-option
-        pc_row = QHBoxLayout()
-        pc_desc = QLabel("Preserve clipboard when pasting")
-        pc_desc.setFont(sans(11))
-        pc_desc.setStyleSheet(f"color: {LT_TEXT_MUTED}; border: none; background: transparent;")
-        pc_desc.setWordWrap(True)
-        pc_row.addWidget(pc_desc, 1)
-        pc_row.addWidget(_info(
-            "Saves your clipboard before pasting the\n"
-            "transcription, then restores it afterward.\n\n"
-            "Your Cmd+V clipboard stays untouched."))
-        self._preserve_clipboard_toggle = _Toggle()
-        self._preserve_clipboard_toggle.toggled.connect(lambda _: self._auto_save())
-        pc_row.addWidget(self._preserve_clipboard_toggle)
-        cb_l.addLayout(pc_row)
-
         layout.addWidget(cb_card)
 
         # Dynamic loading
@@ -1451,7 +1435,6 @@ class SettingsWindow(QDialog):
         pidx = preset_keys.index(cfg.correction_preset) if cfg.correction_preset in preset_keys else 0
         self._correction_preset_combo.setCurrentIndex(pidx)
         self._clipboard_fallback_toggle.set_on(cfg.clipboard_fallback)
-        self._preserve_clipboard_toggle.set_on(cfg.preserve_clipboard)
         self._dynamic_loading_toggle.set_on(cfg.dynamic_loading)
         self._developer_mode_toggle.set_on(cfg.developer_mode)
         if cfg.developer_mode:
@@ -1481,7 +1464,6 @@ class SettingsWindow(QDialog):
             vlm_model=self._vlm_model_combo.currentData(),
             correction_preset=self._correction_preset_combo.currentData(),
             clipboard_fallback=self._clipboard_fallback_toggle.is_on(),
-            preserve_clipboard=self._preserve_clipboard_toggle.is_on(),
             dynamic_loading=self._dynamic_loading_toggle.is_on(),
             developer_mode=self._developer_mode_toggle.is_on(),
         )

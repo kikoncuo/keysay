@@ -163,42 +163,33 @@ def _simulate_cmd_v():
 def paste_text(
     text: str,
     clipboard_fallback: bool = True,
-    preserve_clipboard: bool = False,
     target_app=None,
 ) -> str:
     """Insert text at the current cursor position.
 
+    Flow:
+      1. Copy to clipboard (safety net — never lose the transcription)
+      2. Activate the target app (captured at hotkey press time)
+      3. Simulate Cmd+V to paste
+
     Args:
         text: Text to insert.
         clipboard_fallback: If True, fall back to Cmd+V when AX fails.
-        preserve_clipboard: If True, don't touch the system clipboard.
-            The text is inserted via AX only. If AX fails, the text is
-            stored internally and the user can paste with Fn+V.
         target_app: NSRunningApplication captured at hotkey press time.
 
     Returns:
         "pasted"    — text was inserted via Cmd+V
-        "clipboard" — text copied to clipboard only (preserve mode)
+        "clipboard" — text copied to clipboard only
         "failed"    — nothing worked
     """
     if not text:
         return "failed"
 
+    _copy_to_clipboard(text)
+
     app_name = target_app.localizedName() if target_app else "none"
     _dbg(f"activating target: {app_name}")
     _activate_app(target_app)
-
-    if preserve_clipboard:
-        # Don't touch the real clipboard — try AX insertion only
-        _dbg("preserve_clipboard: trying AX insertion")
-        if _insert_via_accessibility(text, target_app):
-            _dbg("AX insertion succeeded")
-            return "pasted"
-        _dbg("AX failed — text stored for Fn+V")
-        return "clipboard"  # caller shows "Fn+V to paste"
-
-    # Normal flow: put on clipboard + Cmd+V
-    _copy_to_clipboard(text)
 
     if clipboard_fallback:
         _dbg(f"pasting via Cmd+V into {app_name}")
@@ -208,34 +199,3 @@ def paste_text(
         return "pasted"
 
     return "clipboard"
-
-
-def paste_from_buffer(text: str, target_app=None) -> str:
-    """Paste stored text via Fn+V — briefly uses clipboard then restores.
-
-    Called when user presses Fn+V to paste from keysay's internal buffer.
-    Saves clipboard, pastes, restores after a delay.
-    """
-    if not text:
-        return "failed"
-
-    saved = _get_clipboard()
-    _dbg(f"Fn+V: saved clipboard ({len(saved or '')} chars)")
-
-    _activate_app(target_app)
-    _copy_to_clipboard(text)
-    time.sleep(0.05)
-    _simulate_cmd_v()
-    _dbg("Fn+V: Cmd+V sent")
-
-    # Restore after generous delay
-    import threading
-
-    def _restore():
-        time.sleep(1.5)
-        if saved is not None:
-            _copy_to_clipboard(saved)
-        _dbg("Fn+V: clipboard restored")
-
-    threading.Thread(target=_restore, daemon=True).start()
-    return "pasted"

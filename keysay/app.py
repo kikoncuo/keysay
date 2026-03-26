@@ -65,7 +65,6 @@ class KeysayApp(QObject):
         self._model_ready = False
         self._was_pressed = False
         self._loading_cancelled = False  # Cancel flag for async model loads
-        self._last_transcription: str = ""  # For Fn+V paste buffer
         self._last_duration: float = 0.0
         self._last_raw_text: str = ""
         self._target_app = None  # NSRunningApplication captured at hotkey press
@@ -168,11 +167,6 @@ class KeysayApp(QObject):
     @pyqtSlot()
     def _poll_tick(self):
         pressed = self._listener.pressed
-
-        # Detect Fn+V — paste from keysay's internal buffer
-        if self._listener.fn_v_pressed:
-            self._listener.fn_v_pressed = False
-            self._handle_fn_v()
 
         # Detect transitions
         if pressed and not self._was_pressed:
@@ -349,21 +343,6 @@ class KeysayApp(QObject):
     # ------------------------------------------------------------------
     # Press / Release handlers (main thread, no races)
     # ------------------------------------------------------------------
-
-    def _handle_fn_v(self):
-        """Paste last transcription via Fn+V without overwriting clipboard permanently."""
-        if not self._last_transcription:
-            return
-        self._dbg(f"Fn+V: pasting '{self._last_transcription[:40]}'")
-        from keysay.paste.paster import paste_from_buffer
-        import threading
-        text = self._last_transcription
-
-        def _do_paste():
-            paste_from_buffer(text)
-
-        threading.Thread(target=_do_paste, daemon=True).start()
-        self._pill.show_notification("Pasted")
 
     def _handle_press(self):
         self._dbg(f"PRESS: recording={self._recording}, model_ready={self._model_ready}, dynamic={self._config.dynamic_loading}")
@@ -574,22 +553,16 @@ class KeysayApp(QObject):
             except Exception as exc:
                 logger.debug("Failed to save history: %s", exc)
 
-            self._last_transcription = text
-
             from keysay.paste.paster import paste_text
             target_name = self._target_app.localizedName() if self._target_app else "none"
             self._dbg(f"PASTE: target={target_name}, text='{text[:40]}'")
             status = paste_text(
                 text,
                 clipboard_fallback=self._config.clipboard_fallback,
-                preserve_clipboard=self._config.preserve_clipboard,
                 target_app=self._target_app,
             )
             self._dbg(f"PASTE result: {status}")
-            if status == "clipboard" and self._config.preserve_clipboard:
-                logger.info("Stored for Fn+V paste.")
-                self._pill.show_notification("Fn+V to paste")
-            elif status == "clipboard":
+            if status == "clipboard":
                 logger.info("Copied to clipboard (no text field).")
                 self._pill.show_notification("Copied to clipboard")
             else:

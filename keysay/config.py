@@ -90,7 +90,6 @@ class Config:
     custom_prompts: dict[str, str] = field(default_factory=dict)  # preset_key → custom system prompt
     mic_device: int = -1  # -1 = system default
     clipboard_fallback: bool = True  # Copy to clipboard instead of Cmd+V when not in text field
-    preserve_clipboard: bool = True  # Save and restore clipboard around paste
     dynamic_loading: bool = False  # Load models on demand, unload after each transcription
     developer_mode: bool = False  # Show live system logs in settings
 
